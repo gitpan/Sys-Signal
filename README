@@ -13,11 +13,10 @@ SYNOPSIS
       die $@ if $@;
 
 DESCRIPTION
-    The *Sys::Signal* *set* method works much like `local
-    $SIG{FOO}', but with the added functionality of restoring the
-    underlying signal handler to the previous C function, rather
-    than Perl's. Unless, of course, Perl's C signal handler was the
-    previous handler.
+    The *Sys::Signal* *set* method works much like `local $SIG{FOO}', but
+    with the added functionality of restoring the underlying signal handler
+    to the previous C function, rather than Perl's. Unless, of course,
+    Perl's C signal handler was the previous handler.
 
 AUTHOR
     Doug MacEachern

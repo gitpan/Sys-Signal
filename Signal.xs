@@ -14,6 +14,7 @@ typedef struct {
     SV *savesv;
     char *name;
     I32 len;
+    HV *sighv;
 } sys_signal_t;
 
 typedef sys_signal_t * Sys__Signal;
@@ -46,15 +47,15 @@ set(classname, signame, cv)
     CODE:
     name = SvPV(signame,len);
     RETVAL = (sys_signal_t *)safemalloc(sizeof(*RETVAL));
+    Zero(RETVAL, 1, sys_signal_t);
     RETVAL->signo = Perl_whichsig(name);
     RETVAL->h =  Perl_rsignal_state(RETVAL->signo);
     RETVAL->name = strdup(name);
     RETVAL->len = len;
 
-    if (!PL_siggv) {
-	(void)Perl_gv_fetchpv("SIG", TRUE, SVt_PVHV);
-    }
-    elm = Perl_hv_fetch(GvHV(PL_siggv), name, len, TRUE);
+    RETVAL->sighv = perl_get_hv("SIG", TRUE);
+
+    elm = Perl_hv_fetch(RETVAL->sighv, name, len, TRUE);
     RETVAL->savesv = Perl_newSVsv(*elm);
     Perl_sv_setsv(*elm, cv);
     Perl_mg_set(*elm);
@@ -70,10 +71,17 @@ DESTROY(s)
     SV **elm;
 
     CODE:
-    elm = Perl_hv_fetch(GvHV(PL_siggv), s->name, s->len, TRUE);
-    Perl_sv_setsv(*elm, s->savesv);
-    Perl_mg_set(*elm);
+    elm = Perl_hv_fetch(s->sighv, s->name, s->len, TRUE);
+    {
+	I32 old_warn = PL_dowarn;
+	PL_dowarn = 0; /* incase of &PL_sv_undef */
+	Perl_sv_setsv(*elm, s->savesv);	
+	Perl_mg_set(*elm);
+	PL_dowarn = old_warn;
+    }
 
     Perl_rsignal(s->signo, s->h);
+
+    SvREFCNT_dec(s->savesv);
     safefree(s->name);
     safefree(s);
